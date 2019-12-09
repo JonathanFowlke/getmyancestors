@@ -708,6 +708,56 @@ class Indi:
             source.link(file, 1)
             if quote:
                 file.write(cont("2 PAGE " + quote))
+        
+    def export_fact(self, file, fact):
+        found = False
+        for o in self.facts:
+            if o.type == fact:
+                file.write("\"%s\"," % o.place)
+                file.write("\"\",")
+                file.write("\"%s\"," % o.date)
+                found = True
+                break
+        if not found:
+            file.write("\"\",\"\",\"\",")
+
+    def export(self, file=sys.stdout, reference=1):
+        """ export individual to CSV format """
+        #print("Exporting: " + self.fid + " | " + str(reference))
+        #Reference Number
+        file.write("\"%s\"," % reference)
+        #FSID
+        file.write("\"%s\"," % self.fid)
+        if self.name:
+            #Surname
+            file.write("\"%s\"," % self.name.surname)
+            #Given Name
+            file.write("\"%s\"," % self.name.given)
+            #Full Name
+            fullname = "%s %s" % (self.name.given, self.name.surname)
+            if self.name.suffix:
+                fullname += " " + self.name.suffix
+            file.write("\"%s\"," % fullname)
+        else:
+            file.write("\"\",\"\",\"\",")
+        #Gender
+        file.write("\"%s\"," % self.gender)
+        
+        self.export_fact(file, "http://gedcomx.org/Birth")
+        self.export_fact(file, "http://gedcomx.org/Death")
+        self.export_fact(file, "http://gedcomx.org/Burial")
+        self.export_fact(file, "http://gedcomx.org/Marriage")
+        
+        file.write("\n")
+
+        if self.parents:
+            for father, mother in self.parents:
+                if father in self.tree.indi.keys():
+                    fr = reference * 2
+                    self.tree.indi[father].export(file, fr)
+                if mother in self.tree.indi.keys():
+                    mr = reference * 2 + 1
+                    self.tree.indi[mother].export(file, mr)
 
 
 class Fam:
@@ -1059,6 +1109,30 @@ class Tree:
             n.print(file)
         file.write("0 TRLR\n")
 
+    def export(self, file=sys.stdout):
+        """ export family tree to CSV format """
+        file.write("\"Reference Number\",")
+        file.write("\"FSID\",")
+        file.write("\"Surname\",")
+        file.write("\"Given Name\",")
+        file.write("\"Full Name\",")
+        file.write("\"Gender\",")
+        file.write("\"Birth Place\",")
+        file.write("\"Birth Country\",")
+        file.write("\"Birth Date\",")
+        file.write("\"Death Place\",")
+        file.write("\"Death Country\",")
+        file.write("\"Death Date\",")
+        file.write("\"Burial Place\",")
+        file.write("\"Burial Country\",")
+        file.write("\"Burial Date\",")
+        file.write("\"Marriage Place\",")
+        file.write("\"Marriage Country\",")
+        file.write("\"Marriage Date\"\n")
+        
+        id = self.fs.fid
+        self.indi[id].export(file)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1264,7 +1338,7 @@ def main():
 
     # compute number for family relationships and print GEDCOM file
     tree.reset_num()
-    tree.print(args.outfile)
+    tree.export(args.outfile)
     print(
         _(
             "Downloaded %s individuals, %s families, %s sources and %s notes "
