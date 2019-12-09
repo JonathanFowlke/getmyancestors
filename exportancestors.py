@@ -751,12 +751,16 @@ class Indi:
         file.write("\n")
 
         if self.parents:
+            doFather = True
+            doMother = True
             for father, mother in self.parents:
-                if father in self.tree.indi.keys():
+                if doFather and father in self.tree.indi.keys():
                     fr = reference * 2
+                    doFather = False
                     self.tree.indi[father].export(file, fr)
-                if mother in self.tree.indi.keys():
+                if doMother and mother in self.tree.indi.keys():
                     mr = reference * 2 + 1
+                    doMother = False
                     self.tree.indi[mother].export(file, mr)
 
 
